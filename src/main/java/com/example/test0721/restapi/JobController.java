@@ -35,5 +35,9 @@ public class JobController {
         rs.deleteTaskByTaskId(task_id);
     }
 
+    @RequestMapping(value = "/deletejob/{job_id}", method = RequestMethod.DELETE)
+    public void deleteJob(@PathVariable String job_id) {
+        rs.deleteJobByJobId(job_id);
+    }
 
 }

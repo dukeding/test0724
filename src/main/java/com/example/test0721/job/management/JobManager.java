@@ -23,12 +23,12 @@ public interface JobManager {
     public List<Task> getTaskListByJobId(String jobId);
     public Task getTaskByTaskId(String taskId);
     public void deleteTaskByTaskId(String taskId);
-    public void deleteTaskByJobId(String jobId);
+//    public void deleteTaskByJobId(String jobId);
 
     // handle running task
     public void cancelTaskByTaskId(String taskId);
 
     // handle task result
-    public void handleTaskResult(TaskResult tr);
+    public void handleTaskResult(TaskResult tr, String jobId);
 
 }

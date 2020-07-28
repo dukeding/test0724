@@ -25,7 +25,7 @@ public class ExecutorImpl implements Executor {
 
     private static Map<String, Future<Object>> futureMap = new HashMap<String, Future<Object>>();
 
-    private TaskResult doHandleTaskResult(String taskId, Object workerResult, Throwable throwable) {
+    private TaskResult doHandleTaskResult(String taskId, String jobId, Object workerResult, Throwable throwable) {
         futureMap.remove(taskId);
 
         TaskResult tr = new TaskResult();
@@ -48,13 +48,13 @@ public class ExecutorImpl implements Executor {
         }
 
         // notify job manager
-        jobManager.handleTaskResult(tr);
+        jobManager.handleTaskResult(tr, jobId);
 
         return tr;
     }
 
     @Override
-    public boolean startNewTaskByTaskId(String taskId, Long timeout, Object otherInfo) {
+    public boolean startNewTaskByTaskId(String taskId, String jobId, Long timeout, Object otherInfo) {
         if (taskId == null || taskId.isEmpty())
             return false;
 
@@ -64,7 +64,7 @@ public class ExecutorImpl implements Executor {
 
         futureMap.put(taskId, future); // put the task into map
 
-        future.handleAsync((workerResult, throwable) -> doHandleTaskResult(taskId, workerResult, throwable)); // callback function for result
+        future.handleAsync((workerResult, throwable) -> doHandleTaskResult(taskId, jobId, workerResult, throwable)); // callback function for result
 
         return true;
     }

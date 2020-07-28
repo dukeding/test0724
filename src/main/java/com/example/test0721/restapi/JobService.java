@@ -32,4 +32,9 @@ public class JobService implements JobServiceIF {
     public void deleteTaskByTaskId(String taskId) {
         jm.deleteTaskByTaskId(taskId);
     }
+
+    @Override
+    public void deleteJobByJobId(String jobId) {
+        jm.deleteJobByJobId(jobId);
+    }
 }

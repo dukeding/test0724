@@ -30,7 +30,7 @@ public class JobManagerImpl implements JobManager {
     }
 
     @Override
-    public void createJob(Job job) {
+    public synchronized void createJob(Job job) {
         if (job == null)
             return;
 
@@ -41,13 +41,13 @@ public class JobManagerImpl implements JobManager {
     }
 
     @Override
-    public List<Job> getJobList() {
+    public synchronized List<Job> getJobList() {
         return jobList.parallelStream().map(e -> e.copy()).sorted(Comparator.comparing(Job::getJobScheduledTime)
                 .reversed()).collect(Collectors.toList());
     }
 
     @Override
-    public Job getJobByJobId(String jobId) {
+    public synchronized Job getJobByJobId(String jobId) {
         if (jobId == null || jobId.isEmpty())
             return null;
 
@@ -55,7 +55,7 @@ public class JobManagerImpl implements JobManager {
     }
 
     @Override
-    public void updateJobMetaInfo(String jobId, String jobName, String jobScheduledTime, Long jobTimeout, String description) {
+    public synchronized void updateJobMetaInfo(String jobId, String jobName, String jobScheduledTime, Long jobTimeout, String description) {
         if (jobId == null || jobId.isEmpty())
             return;
 
@@ -80,7 +80,7 @@ public class JobManagerImpl implements JobManager {
 //        job.setLatestTaskStatus(latestTaskStatus);
 //    }
 
-    private Job getJobByJobId_internal(String jobId) {
+    private synchronized Job getJobByJobId_internal(String jobId) {
         if (jobId == null || jobId.isEmpty())
             return null;
 
@@ -88,7 +88,7 @@ public class JobManagerImpl implements JobManager {
     }
 
     @Override
-    public Job getJobByTaskId(String taskId) {
+    public synchronized Job getJobByTaskId(String taskId) {
         if (taskId == null || taskId.isEmpty())
             return null;
 
@@ -103,7 +103,7 @@ public class JobManagerImpl implements JobManager {
     }
 
     @Override
-    public void handleTaskResult(TaskResult tr) {
+    public synchronized void handleTaskResult(TaskResult tr, String jobId) {
         if (tr == null || tr.getTaskId() == null || tr.getTaskId().isEmpty())
             return;
 
@@ -120,7 +120,7 @@ public class JobManagerImpl implements JobManager {
         }
 
         // update job
-        Job job = getJobByTaskId_internal(taskId);
+        Job job = getJobByJobId_internal(jobId); // do not use taskId to lookup job, because task may be already deleted
 
         if (job != null && job.getLatestTaskId() != null && job.getLatestTaskId().equals(taskId)) {
             if (Task.inRunning(job.getLatestTaskStatus())) { // job still in running
@@ -129,7 +129,7 @@ public class JobManagerImpl implements JobManager {
         }
     }
 
-    private Job getJobByTaskId_internal(String taskId) {
+    private synchronized Job getJobByTaskId_internal(String taskId) {
         Task task = getTaskByTaskId_internal(taskId);
         if (task == null || task.getJobId() == null || task.getJobId().isEmpty())
             return null;
@@ -137,7 +137,7 @@ public class JobManagerImpl implements JobManager {
         return jobList.parallelStream().filter(e -> task.getJobId().equals(e.getJobId())).findAny().orElse(null);
     }
 
-    private Task getTaskByTaskId_internal(String taskId) {
+    private synchronized Task getTaskByTaskId_internal(String taskId) {
         if (taskId == null || taskId.isEmpty())
             return null;
 
@@ -145,26 +145,12 @@ public class JobManagerImpl implements JobManager {
     }
 
     @Override
-    public void deleteJobByJobId(String jobId) {
+    public synchronized void deleteJobByJobId(String jobId) {
         if (jobId == null || jobId.isEmpty())
             return;
 
-//        Job job = getJobByJobId_internal(jobId);
-//        if (job != null && Task.inRunning(job.getLatestTaskStatus())) {
-//            //
-//            job.setLatestTaskStatus(Task.TaskStatusEnum.CANCELLED);
-//        }
-
-        List<Task> taskList = getTaskListByJobId(jobId);
-        if (taskList != null) {
-            taskList.parallelStream().filter(e -> Task.inRunning(e.getTaskStatus()))
-                    .forEach(e -> {
-                        cancelTaskByTaskId(e.getTaskId());
-
-//                        e.setTaskStatus(Task.TaskStatusEnum.CANCELLED);
-//                        e.setEndTime(System.currentTimeMillis());
-                    });
-        }
+        taskList.parallelStream().filter(e -> jobId.equals(e.getJobId()) && Task.inRunning(e.getTaskStatus()))
+                .forEach(e -> cancelTaskByTaskId(e.getTaskId()));
 
         doDeleteTaskByJobId(jobId);
 
@@ -172,7 +158,7 @@ public class JobManagerImpl implements JobManager {
     }
 
     @Override
-    public void cancelTaskByTaskId(String taskId) {
+    public synchronized void cancelTaskByTaskId(String taskId) {
         if (taskId == null || taskId.isEmpty())
             return;
 
@@ -197,22 +183,32 @@ public class JobManagerImpl implements JobManager {
 //        });
     }
 
-    private void doDeleteTaskByJobId(String jobId) {
+    private synchronized void doDeleteTaskByJobId(String jobId) {
         if (jobId == null || jobId.isEmpty())
             return;
 
-        taskList.parallelStream().filter(e -> jobId.equals(e.getJobId())).forEach(e -> taskList.remove(e));
+        // below code would throw ConcurrentModificationException
+        //taskList.parallelStream().filter(e -> jobId.equals(e.getJobId())).forEach(e -> taskList.remove(e));
+
+        Iterator<Task> iterable = taskList.iterator();
+        while (iterable.hasNext()) {
+            Task task = iterable.next();
+            if (jobId.equals(task.getJobId())) {
+                iterable.remove();
+            }
+        }
+
     }
 
-    private void doDeleteJobByJobId(String jobId) {
+    private synchronized void doDeleteJobByJobId(String jobId) {
         if (jobId == null || jobId.isEmpty())
             return;
 
-        jobList.parallelStream().filter(e -> jobId.equals(e.getJobId())).findAny().ifPresent(e -> taskList.remove(e));
+        jobList.parallelStream().filter(e -> jobId.equals(e.getJobId())).findAny().ifPresent(e -> jobList.remove(e));
     }
 
     @Override
-    public String createTaskByJobId(String jobId, Long jobTimeout) {
+    public synchronized String createTaskByJobId(String jobId, Long jobTimeout) {
         if (jobId == null || jobId.isEmpty())
             return null;
 
@@ -241,18 +237,18 @@ public class JobManagerImpl implements JobManager {
         return taskId;
     }
 
-    private List<Task> getTaskList_internal() {
+    private synchronized List<Task> getTaskList_internal() {
         return taskList;
     }
 
     @Override
-    public List<Task> getTaskList() {
+    public synchronized List<Task> getTaskList() {
         return taskList.parallelStream().map(e -> e.copy())
                 .sorted(Comparator.comparing(Task::getStartTime).reversed()).collect(Collectors.toList());
     }
 
     @Override
-    public List<Task> getTaskListByJobId(String jobId) {
+    public synchronized List<Task> getTaskListByJobId(String jobId) {
         if (jobId == null || jobId.isEmpty())
             return null;
 
@@ -261,7 +257,7 @@ public class JobManagerImpl implements JobManager {
     }
 
     @Override
-    public Task getTaskByTaskId(String taskId) {
+    public synchronized Task getTaskByTaskId(String taskId) {
         if (taskId == null || taskId.isEmpty())
             return null;
 
@@ -270,7 +266,7 @@ public class JobManagerImpl implements JobManager {
     }
 
     @Override
-    public void deleteTaskByTaskId(String taskId) {
+    public synchronized void deleteTaskByTaskId(String taskId) {
         if (taskId == null || taskId.isEmpty())
             return;
 
@@ -278,20 +274,25 @@ public class JobManagerImpl implements JobManager {
             if (Task.inRunning(e.getTaskStatus()))
                 cancelTaskByTaskId(taskId);
 
-            // todo: cancel would update job latest task status, but the async remove() operation may make job not found by taskId
+            // cancel would update task and job, but the async remove() operation may make task/job not found
+            // for task, if the task is removed, then no need to update task
+            // for job, note that don't use taskId to look up job
             taskList.remove(e);
         });
     }
 
-    @Override
-    public void deleteTaskByJobId(String jobId) {
-        if (jobId == null || jobId.isEmpty())
-            return;
-
-        taskList.parallelStream().filter(e -> jobId.equals(e.getJobId())).forEach(e -> {
-            if (Task.inRunning(e.getTaskStatus()))
-                cancelTaskByTaskId(e.getTaskId());
-            taskList.remove(e);
-        });
-    }
+//    private synchronized void deleteTaskByJobId(String jobId) {
+//        if (jobId == null || jobId.isEmpty())
+//            return;
+//
+//        Iterator<Task> iterator = taskList.iterator();
+//        while (iterator.hasNext()) {
+//            Task task = iterator.next();
+//            if (jobId.equals(task.getJobId())) {
+//                if (Task.inRunning(task.getTaskStatus()))
+//                    cancelTaskByTaskId(task.getTaskId());
+//                iterator.remove();
+//            }
+//        }
+//    }
 }

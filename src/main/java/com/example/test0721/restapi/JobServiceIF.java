@@ -13,4 +13,6 @@ public interface JobServiceIF {
     public void cancelTaskByTaskId(String taskId);
 
     public void deleteTaskByTaskId(String taskId);
+
+    public void deleteJobByJobId(String jobId);
 }

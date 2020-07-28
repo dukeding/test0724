@@ -57,7 +57,7 @@ public class JobScheduler extends Thread {
             if (optional.isPresent()) { // should invoke
                 String taskId = jobManager.createTaskByJobId(job.getJobId(), job.getJobTimeout());
 
-                executor.startNewTaskByTaskId(taskId, job.getJobTimeout(), job);
+                executor.startNewTaskByTaskId(taskId, job.getJobId(), job.getJobTimeout(), job);
 
                 // commented out because concurrent updates may conflict
                 //jobManager.updateTaskStatusByTaskId(taskId, Task.TaskStatusEnum.RUNNING);
