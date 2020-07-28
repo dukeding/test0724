@@ -6,10 +6,9 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
-public class Task implements Cloneable{
-    private Logger logger = LoggerFactory.getLogger(Task.class);
+public class Task implements Cloneable {
+    private Logger logger = LoggerFactory.getLogger(getClass());
 
     // meta info
     private String taskId;
@@ -46,7 +45,9 @@ public class Task implements Cloneable{
         RUNNING,
         TIMEOUT,
         CANCELLED,
-        COMPLETED_SUCCESS,
+        INTERRUPTED,
+        EXCEPTIONAL,
+        COMPLETE_SUCCESS,
         COMPLETE_SUCCESSWITHWARNING,
         COMPLETE_FAILED;
     }
@@ -57,7 +58,9 @@ public class Task implements Cloneable{
             case READY:
             case TIMEOUT:
             case CANCELLED:
-            case COMPLETED_SUCCESS:
+            case INTERRUPTED:
+            case EXCEPTIONAL:
+            case COMPLETE_SUCCESS:
             case COMPLETE_SUCCESSWITHWARNING:
             case COMPLETE_FAILED:
                 return false;

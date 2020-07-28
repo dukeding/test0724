@@ -1,20 +1,15 @@
 package com.example.test0721.pojo;
 
 public class TaskResult {
-    public enum TaskResultEnum {
-        SUCCESS, SUCCESS_WITHWARNING, FAILED, INTERRUPTED
-    }
-
     private String taskId;
-    private TaskResultEnum result;
-    private Long endTime;
+    private Task.TaskStatusEnum result;
     private Object resultInfo;
 
-    public TaskResultEnum getResult() {
+    public Task.TaskStatusEnum getResult() {
         return result;
     }
 
-    public void setResult(TaskResultEnum result) {
+    public void setResult(Task.TaskStatusEnum result) {
         this.result = result;
     }
 
@@ -34,20 +29,11 @@ public class TaskResult {
         this.taskId = taskId;
     }
 
-    public Long getEndTime() {
-        return endTime;
-    }
-
-    public void setEndTime(Long endTime) {
-        this.endTime = endTime;
-    }
-
     @Override
     public String toString() {
         return "TaskResult{" +
                 "taskId='" + taskId + '\'' +
                 ", result=" + result +
-                ", endTime=" + endTime +
                 ", resultInfo=" + resultInfo +
                 '}';
     }

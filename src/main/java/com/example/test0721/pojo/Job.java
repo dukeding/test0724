@@ -1,13 +1,10 @@
 package com.example.test0721.pojo;
 
-import com.example.test0721.job.management.JobScheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
-
 public class Job implements Cloneable{
-    private Logger logger = LoggerFactory.getLogger(Job.class);
+    private Logger logger = LoggerFactory.getLogger(getClass());
 
     // meta info
     private String jobId;
@@ -110,16 +107,6 @@ public class Job implements Cloneable{
         return job;
     }
 
-//    public void updateRuntimeInfo(Job job) {
-//        if (job == null)
-//            return;
-//
-//        // todo:
-//        this.latestTaskId = job.getLatestTaskId();
-//        this.latestTaskStatus = job.getLatestTaskStatus();
-//        this.latestTaskRunTime = job.getLatestTaskRunTime();
-//    }
-
     public void updateMetaInfo(Job job) {
         if (job == null)
             return;
@@ -146,22 +133,4 @@ public class Job implements Cloneable{
                 '}';
     }
 
-    public static void main(String[] args) {
-        Job job = new Job("xxx", "jobname", "aaa", 60*1000L, "description", null, null, null);
-        Job job2 = null;
-        try {
-            job2 = (Job)job.clone();
-        } catch (CloneNotSupportedException e) {
-            e.printStackTrace();
-        }
-
-        System.out.println(job.getJobId());
-        System.out.println(job2.getJobId());
-
-        job2.setJobId("yyy");
-
-        System.out.println(job.getJobId());
-        System.out.println(job2.getJobId());
-
-    }
 }
